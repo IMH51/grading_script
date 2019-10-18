@@ -1,64 +1,52 @@
-// https://learn.co/admin/assignments/2496
-
-try {
-  submissionLinks.length === 0;
-} catch {
-  submissionLinks = [];
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const thingsToClick = document.querySelector(
-  "#js--gradingContainer > li:nth-child(5) > div > div.module__body > div > div.flex-grid__item.flex-grid__item--grow-1 > div > ul"
-);
+  '#js--gradingContainer > li:nth-child(5) > div > div.module__body > div > div.flex-grid__item.flex-grid__item--grow-1 > div > ul'
+)
+const clickAble = [...thingsToClick.children]
 
-const config = {
-  numStudents: thingsToClick.querySelectorAll(
-    ".module.module--flush.module--buffer-large"
-  ).length
-};
+console.log(`there are ${clickAble.length} students to grade`)
 
-console.log(`there are ${config.numStudents} students to grade`);
+const grabLink = () => {
+  const link = document.querySelector('#js--urlSubmission')
+  return link ? link.innerText : undefined
+}
 
-const clickAble = Array.from(thingsToClick.children);
+const postLinks = links =>
+  fetch('http://localhost:3000', {
+    method: 'POST',
+    body: JSON.stringify(links),
+    headers: { 'Content-Type': 'application/json' }
+  }).then(res => res.json())
 
-function grabLink() {
-  const studentSubLink = document.querySelector("#js--urlSubmission");
-  submissionLinks.push(studentSubLink.innerText);
-  console.log("studentSubLink added, caputured links:", submissionLinks.length);
+const handleSubmissionLinks = links => {
+  if (links.length < clickAble.length) {
+    console.error(
+      'something went bad - we do not have all the links, gonna try anyway'
+    )
+  }
+
+  console.log(`posting ${links.length} links to server...`)
+  postLinks(links).then(json =>
+    console.log("posted. here's what the server has parsed:", json)
+  )
 }
 
 async function main() {
-  for (let i = 0; i < config.numStudents; i++) {
-    // await sleep(2000);
-    clickAble[i].click();
-    await sleep(2000);
-    grabLink();
-  }
-
-  if (submissionLinks.length < config.numStudents) {
-    console.error("something went bad - we do not have all the links");
-  } else {
-    console.log("posting", submissionLinks.length, "links to server...");
-    fetch("http://localhost:3000", {
-      method: "POST",
-      body: JSON.stringify(submissionLinks),
-      headers: { "Content-Type": "application/json" }
-    }).then(data =>
-      data
-        .json()
-        .then(json =>
-          console.log("posted. here's what the server has parsed: ", json)
+  let submissionLinks = []
+  clickAble
+    .reduce((promise, studentClickable, i) => {
+      return promise
+        .then(() => studentClickable.click())
+        .then(() => sleep(2000))
+        .then(() => submissionLinks.push(grabLink()))
+        .then(() => (submissionLinks = submissionLinks.filter(link => !!link)))
+        .then(() =>
+          console.log(
+            `studentSubLink added, caputured links so far: ${submissionLinks.length}`
+          )
         )
-    );
-  }
+    }, Promise.resolve())
+    .then(() => handleSubmissionLinks(submissionLinks))
 }
-
-// send to a simple nodejs server on localhost
-// node server opens all in browser
-// manually clone repos to computer with studebt names
-// run grading script on each of them
-
-main();
+main()
