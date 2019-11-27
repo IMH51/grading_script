@@ -90,7 +90,7 @@ const openSubmission = ({ userName, repoName }, index) => {
     const cwd = `repos/${userName}/`
     console.log(`opening folder for ${userName} at cwd: ${cwd}`)
 
-    let userPort = port + index
+    let userPort = port + index + 1
 
     Object.keys(moduleHandlers).forEach(modName => {
       if (repoName.includes(modName)) {
